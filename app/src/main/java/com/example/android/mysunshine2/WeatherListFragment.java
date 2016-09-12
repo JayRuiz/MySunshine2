@@ -152,10 +152,12 @@ public class WeatherListFragment extends Fragment{
         String unit = findTempUnit(getSharedPreferenceTempUnit());
         String period = getSharedPreferencePeriod();
 
+        //String key = MyOpenWeatherMapApiKey;
+
         String [] queryInfo = {"http", "api.openweathermap.org","data","2.5","forecast","daily",
                 location,"json",unit,period,"a0b1dba4292d37df112985f4182f153b"
         };
-        new FetchWeatherTask().execute(queryInfo);
+        new FetchWeatherTask(getActivity(), weatherAdapter).execute(queryInfo);
     }
 
     private String findTempUnit(String tempUnit){
@@ -304,26 +306,26 @@ public class WeatherListFragment extends Fragment{
         return forecastJsonStrArray;
 
     }
-
-    class FetchWeatherTask extends AsyncTask<String, Void, String[]> {
-
-        protected String[] doInBackground(String... queryInfo) {
-
-            return makeWeatherInfoRequest(queryInfo);
-        }
-
-        protected void onPostExecute(String[] weatherList) {
-
-            if (weatherList != null) {
-                weatherAdapter.clear();
-                for(String dayForecastStr : weatherList ) {
-                    weatherAdapter.add(dayForecastStr);
-                }
-            } else {
-                Log.d(TAG, "There is no info returned from Weather Server");
-            }
-        }
-    }
+//
+//    class FetchWeatherTask extends AsyncTask<String, Void, String[]> {
+//
+//        protected String[] doInBackground(String... queryInfo) {
+//
+//            return makeWeatherInfoRequest(queryInfo);
+//        }
+//
+//        protected void onPostExecute(String[] weatherList) {
+//
+//            if (weatherList != null) {
+//                weatherAdapter.clear();
+//                for(String dayForecastStr : weatherList ) {
+//                    weatherAdapter.add(dayForecastStr);
+//                }
+//            } else {
+//                Log.d(TAG, "There is no info returned from Weather Server");
+//            }
+//        }
+//    }
 
         /* The date/time conversion code is going to be moved outside the asynctask later,
  * so for convenience we're breaking it out into its own method now.
