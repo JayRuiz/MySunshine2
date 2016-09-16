@@ -1,9 +1,11 @@
 package com.example.android.mysunshine2;
 
-import android.app.Fragment;
+//import android.app.Fragment;
+//import android.app.LoaderManager;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.database.Cursor;
 import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Bundle;
@@ -35,17 +37,57 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import android.support.v4.app.Fragment;
+import android.support.v4.app.LoaderManager;
+import android.support.v4.content.Loader;
+import android.support.v4.content.CursorLoader;
+
+import com.example.android.mysunshine2.data.WeatherContract;
 
 /**
  * Created by Jeaun on 7/13/2016.
  */
-public class WeatherListFragment extends Fragment{
+public class WeatherListFragment extends Fragment implements LoaderManager.LoaderCallbacks <Cursor> {
 
-    private ArrayAdapter<String> weatherAdapter;
+
+    private static final String[] FORECAST_COLUMNS = {
+            // In this case the id needs to be fully qualified with a table name, since
+            // the content provider joins the location & weather tables in the background
+            // (both have an _id column)
+            // On the one hand, that's annoying.  On the other, you can search the weather table
+            // using the location set by the user, which is only in the Location table.
+            // So the convenience is worth it.
+            WeatherContract.WeatherEntry.TABLE_NAME + "." + WeatherContract.WeatherEntry._ID,
+            WeatherContract.WeatherEntry.COLUMN_DATE,
+            WeatherContract.WeatherEntry.COLUMN_SHORT_DESC,
+            WeatherContract.WeatherEntry.COLUMN_MAX_TEMP,
+            WeatherContract.WeatherEntry.COLUMN_MIN_TEMP,
+            WeatherContract.LocationEntry.COLUMN_LOCATION_SETTING,
+            WeatherContract.WeatherEntry.COLUMN_WEATHER_ID,
+            WeatherContract.LocationEntry.COLUMN_COORD_LAT,
+            WeatherContract.LocationEntry.COLUMN_COORD_LONG
+    };
+
+    // These indices are tied to FORECAST_COLUMNS.  If FORECAST_COLUMNS changes, these
+    // must change.
+    static final int COL_WEATHER_ID = 0;
+    static final int COL_WEATHER_DATE = 1;
+    static final int COL_WEATHER_DESC = 2;
+    static final int COL_WEATHER_MAX_TEMP = 3;
+    static final int COL_WEATHER_MIN_TEMP = 4;
+    static final int COL_LOCATION_SETTING = 5;
+    static final int COL_WEATHER_CONDITION_ID = 6;
+    static final int COL_COORD_LAT = 7;
+    static final int COL_COORD_LONG = 8;
+
+    //private ArrayAdapter<String> weatherAdapter;
+    private ForecastAdapter weatherAdapter;
+
     private static final String TAG = "WeatherListFragment";
     private View rootView;
     private final boolean useFake = false;
     private static final String MAX_DAYS = "16";
+    private static final int FORECAST_LOADER = 0;
 
     public void onCreat(Bundle savedInsstanceState){
         super.onCreate(savedInsstanceState);
@@ -55,30 +97,19 @@ public class WeatherListFragment extends Fragment{
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
            // Inflate the layout for this fragment
-        setHasOptionsMenu(true);
-        rootView = inflater.inflate(R.layout.weather_list, container, false);
 
         Log.i(TAG, "WeatherListFragment onCreatView is called --- 2 ");
 
-        // Create some dummy data for the ListView.  Here's a sample weekly forecast
-        /*
-            String[] data = {
-                    "Mon 6/23 - Sunny - 31/17",
-                    "Tue 6/24 - Foggy - 21/8",
-                    "Wed 6/25 - Cloudy - 22/17",
-                    "Thurs 6/26 - Rainy - 18/11",
-                    "Fri 6/27 - Foggy - 21/10",
-                    "Sat 6/28 - TRAPPED IN WEATHERSTATION - 23/18",
-                    "Sun 6/29 - Sunny - 20/7"
-            };
-             List<String> weekForecast = new ArrayList<String>(Arrays.asList(data));
-        */
-        List<String> weekForecast = new ArrayList<String>();
-         /* This ArrayAdapter to take TextView's layout and id */
-        weatherAdapter = new ArrayAdapter<String>(getActivity(), R.layout.list_item_forecast, R.id.list_item_forecast_textview, weekForecast);
+        setHasOptionsMenu(true);
+
+
+
+        weatherAdapter = new ForecastAdapter(getActivity(), null, 0);
+
+        rootView = inflater.inflate(R.layout.weather_list, container, false);
         ListView listListView = (ListView) rootView.findViewById(R.id.listview_forecast);
         listListView.setAdapter(weatherAdapter);
-
+/*
         listListView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
             public void onItemClick(AdapterView<?> adapterView, View myView, int position, long id) {
 
@@ -86,18 +117,36 @@ public class WeatherListFragment extends Fragment{
                 showDetail((String) adapterView.getItemAtPosition(position));
             }
         });
+*/
+        listListView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
 
-
-        executeTask();
-
+            @Override
+            public void onItemClick(AdapterView adapterView, View view, int position, long l) {
+                // CursorAdapter returns a cursor at the correct position for getItem(), or null
+                // if it cannot seek to that position.
+                Cursor cursor = (Cursor) adapterView.getItemAtPosition(position);
+                if (cursor != null) {
+                    String locationSetting = Utility.getPreferredLocation(getActivity());
+                    Intent intent = new Intent(getActivity(), Detail.class)
+                            .setData(WeatherContract.WeatherEntry.buildWeatherLocationWithDate(
+                                    locationSetting, cursor.getLong(COL_WEATHER_DATE)
+                            ));
+                    startActivity(intent);
+                }
+            }
+        });
         return rootView;
     }
 
+    /*
     public void onStart(){
         super.onStart();
         executeTask();
 
     }
+    */
+
+    /*
     private void showDetail (String weatherInfo){
 
         Intent intent = new Intent(getActivity(), Detail.class);
@@ -106,6 +155,7 @@ public class WeatherListFragment extends Fragment{
             startActivity(intent);
         //}
     }
+    */
 
     private void toastMessage(String weatherInfo) {
         Context context = getActivity();
@@ -119,7 +169,7 @@ public class WeatherListFragment extends Fragment{
 
     public void onCreateOptionsMenu(Menu menu, MenuInflater inflater) {
         super.onCreateOptionsMenu(menu, inflater);
-        //menu.clear();
+        menu.clear();
         inflater.inflate(R.menu.forecastfragment, menu);
     }
 
@@ -144,6 +194,12 @@ public class WeatherListFragment extends Fragment{
         }
     }
 
+    public void onLocationChanged(){
+
+        executeTask();
+        getLoaderManager().restartLoader(FORECAST_LOADER, null, this);
+    }
+
     private void executeTask(){
         //String queryInfo = "http://api.openweathermap.org/data/2.5/forecast/daily?q=98027&mode=json&units=metric&cnt=7";
 
@@ -157,7 +213,11 @@ public class WeatherListFragment extends Fragment{
         String [] queryInfo = {"http", "api.openweathermap.org","data","2.5","forecast","daily",
                 location,"json",unit,period,"a0b1dba4292d37df112985f4182f153b"
         };
-        new FetchWeatherTask(getActivity(), weatherAdapter).execute(queryInfo);
+        // Jay: change by ForecastAdapter
+        //new FetchWeatherTask(getActivity(), weatherAdapter).execute(queryInfo);
+
+        FetchWeatherTask weatherTask = new FetchWeatherTask(getActivity());
+        weatherTask.execute(queryInfo);
     }
 
     private String findTempUnit(String tempUnit){
@@ -427,4 +487,32 @@ public class WeatherListFragment extends Fragment{
         }
 
 
+    // Jay: added for Loader
+    public void onActivityCreated(Bundle savedInsstanceState){
+        super.onActivityCreated(savedInsstanceState);
+        getLoaderManager().initLoader(FORECAST_LOADER, null, this);
+
+    }
+
+    @Override
+    public Loader<Cursor> onCreateLoader(int id, Bundle args) {
+
+        String locationSetting = Utility.getPreferredLocation(getActivity());
+        String sortOrder = WeatherContract.WeatherEntry.COLUMN_DATE+ " ASC";
+
+        Uri weatherForLocationUri = WeatherContract.WeatherEntry.buildWeatherLocationWithStartDate(locationSetting, System.currentTimeMillis());
+
+        return new CursorLoader(getActivity(), weatherForLocationUri, FORECAST_COLUMNS, null, null, sortOrder);
+
+    }
+
+    @Override
+    public void onLoadFinished(Loader<Cursor> loader, Cursor data) {
+        weatherAdapter.swapCursor(data);
+    }
+
+    @Override
+    public void onLoaderReset(Loader<Cursor> loader) {
+        weatherAdapter.swapCursor(null);
+    }
 }
