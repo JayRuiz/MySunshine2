@@ -89,6 +89,8 @@ public class WeatherListFragment extends Fragment implements LoaderManager.Loade
     private static final String MAX_DAYS = "16";
     private static final int FORECAST_LOADER = 0;
 
+    private ListView listListView;
+
     public void onCreat(Bundle savedInsstanceState){
         super.onCreate(savedInsstanceState);
         setHasOptionsMenu(true);
@@ -107,17 +109,9 @@ public class WeatherListFragment extends Fragment implements LoaderManager.Loade
         weatherAdapter = new ForecastAdapter(getActivity(), null, 0);
 
         rootView = inflater.inflate(R.layout.weather_list, container, false);
-        ListView listListView = (ListView) rootView.findViewById(R.id.listview_forecast);
+        listListView = (ListView) rootView.findViewById(R.id.listview_forecast);
         listListView.setAdapter(weatherAdapter);
-/*
-        listListView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
-            public void onItemClick(AdapterView<?> adapterView, View myView, int position, long id) {
 
-                //toastMessage((String) adapterView.getItemAtPosition(position));
-                showDetail((String) adapterView.getItemAtPosition(position));
-            }
-        });
-*/
         listListView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
 
             @Override
@@ -197,6 +191,10 @@ public class WeatherListFragment extends Fragment implements LoaderManager.Loade
     public void onLocationChanged(){
 
         executeTask();
+        //getLoaderManager().
+        Log.d(TAG, "onLocationChanged() is called. Need to reset the list view");
+
+
         getLoaderManager().restartLoader(FORECAST_LOADER, null, this);
     }
 
@@ -309,6 +307,7 @@ public class WeatherListFragment extends Fragment implements LoaderManager.Loade
             Log.d(TAG,"Request URL1: "+myUrl);
 
             URL url = new URL(myUrl);
+
 
             // Create the request to OpenWeatherMap, and open the connection
             urlConnection = (HttpURLConnection) url.openConnection();
@@ -508,11 +507,13 @@ public class WeatherListFragment extends Fragment implements LoaderManager.Loade
 
     @Override
     public void onLoadFinished(Loader<Cursor> loader, Cursor data) {
+        Log.d(TAG, "onLoadFinished is called");
         weatherAdapter.swapCursor(data);
     }
 
     @Override
     public void onLoaderReset(Loader<Cursor> loader) {
+        Log.d(TAG, "onLoaderReset is called");
         weatherAdapter.swapCursor(null);
     }
 }

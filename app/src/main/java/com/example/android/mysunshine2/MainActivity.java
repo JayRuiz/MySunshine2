@@ -13,13 +13,20 @@ public class MainActivity extends AppCompatActivity {
     private final String LOG_TAG = MainActivity.class.getSimpleName();
 
     private final String FORECASTFRAGMENT_TAG = "FFTAG";
+
+    ///Jay save preference
     private String mLocation;
+    private boolean mMetric;
+    private String mPeriod;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
 
         Log.d(LOG_TAG, "MainActivity onCreate is called");
         mLocation = Utility.getPreferredLocation(this);
+        mMetric = Utility.isMetric(this);
+        mPeriod = Utility.getPreferredPeriod(this);
+
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
@@ -29,13 +36,38 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
+    private boolean isRefreshRequired(){
+
+        //Jay setting: location, metric, period
+        String location = Utility.getPreferredLocation(this);
+        if(location!=null && !location.equals(mLocation)){
+            return true;
+        }
+
+        boolean metric = Utility.isMetric(this);
+        if(mMetric != metric){
+            return true;
+        }
+
+        String period = Utility.getPreferredPeriod(this);
+        return period != null && !mPeriod.equals(period);
+
+    }
+
+
     protected void onResume(){
         super.onResume();
 
         Log.d(LOG_TAG, "onResume is called");
 
         String location = Utility.getPreferredLocation(this);
-        if(location !=null && !location.equals(mLocation)){
+
+        String appName = this.getString(R.string.app_name);
+
+        this.setTitle(appName+": "+ location);
+
+        //if(location !=null && !location.equals(mLocation) ){
+        if(isRefreshRequired()) {
             WeatherListFragment ff = (WeatherListFragment)getSupportFragmentManager().findFragmentByTag(FORECASTFRAGMENT_TAG);
             if (ff != null){
                 ff.onLocationChanged();
