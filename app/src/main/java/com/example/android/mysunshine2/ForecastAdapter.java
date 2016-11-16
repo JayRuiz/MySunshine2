@@ -25,38 +25,19 @@ public class ForecastAdapter extends CursorAdapter {
     private final int VIEW_TYPE_TODAY = 0;
     private final int VIEW_TYPE_FUTURE_DAY= 1;
 
+    private boolean mUseTodayLayout = true;
+
     public ForecastAdapter(Context context, Cursor c, int flags) {
         super(context, c, flags);
     }
 
 
-    /**
-     * Prepare the weather high/lows for presentation.
-     */
-//    private String formatHighLows(double high, double low) {
-//        boolean isMetric = Utility.isMetric(mContext);
-//        String highLowStr = Utility.formatTemperature(getActivity(),high, isMetric) + "/" + Utility.formatTemperature(low, isMetric);
-//        return highLowStr;
-//    }
-
-    /*
-        This is ported from FetchWeatherTask --- but now we go straight from the cursor to the
-        string.
-     */
-//    private String convertCursorRowToUXFormat(Cursor cursor) {
-//
-//        String highAndLow = formatHighLows(
-//                cursor.getDouble(WeatherListFragment.COL_WEATHER_MAX_TEMP),
-//                cursor.getDouble(WeatherListFragment.COL_WEATHER_MIN_TEMP)
-//                );
-//
-//        return Utility.formatDate(cursor.getLong(WeatherListFragment.COL_WEATHER_DATE))+
-//                " - " + cursor.getString(WeatherListFragment.COL_WEATHER_DESC)+
-//                " - " + highAndLow;
-//    }
+    public void setUseTodayLayout(boolean useTodayLayout){
+        mUseTodayLayout = useTodayLayout;
+    }
 
     public int getItemViewType(int position){
-        return (position ==0)? VIEW_TYPE_TODAY : VIEW_TYPE_FUTURE_DAY;
+        return (position ==0 && mUseTodayLayout)? VIEW_TYPE_TODAY : VIEW_TYPE_FUTURE_DAY;
     }
 
     public int getViewTypeCount(){

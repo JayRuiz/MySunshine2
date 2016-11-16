@@ -10,12 +10,6 @@
     android:orientation="vertical"
     android:id="@+id/container"
     tools:context="com.example.android.mysunshine2.MainActivity">
-    <!--
-    <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Hello World!" />
-        -->
 
     <fragment
         android:name ="com.example.android.mysunshine2.WeatherListFragment"

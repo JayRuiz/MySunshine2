@@ -43,6 +43,7 @@ import android.support.v4.content.Loader;
 import android.support.v4.content.CursorLoader;
 
 import com.example.android.mysunshine2.data.WeatherContract;
+import com.example.android.mysunshine2.service.SunshineService;
 
 /**
  * Created by Jeaun on 7/13/2016.
@@ -89,7 +90,26 @@ public class WeatherListFragment extends Fragment implements LoaderManager.Loade
     private static final String MAX_DAYS = "16";
     private static final int FORECAST_LOADER = 0;
 
-    private ListView listListView;
+    private ListView mListView;
+
+    private boolean mUseTodayLayout = true;
+
+    private int mPosition = ListView.INVALID_POSITION;
+    private static final String SELECTED_KEY = "selected_position";
+
+    /**
+     * A callback interface that all activities containing this fragment must
+     * implement. This mechanism allows activities to be notified of item
+     * selections.
+     */
+    public interface Callback {
+
+        /**
+         * DetailFragmentCallback for when an item has been selected.
+        */
+
+        public void onItemSelected(Uri dateUri);
+    }
 
     public void onCreat(Bundle savedInsstanceState){
         super.onCreate(savedInsstanceState);
@@ -104,15 +124,13 @@ public class WeatherListFragment extends Fragment implements LoaderManager.Loade
 
         setHasOptionsMenu(true);
 
-
-
         weatherAdapter = new ForecastAdapter(getActivity(), null, 0);
 
         rootView = inflater.inflate(R.layout.weather_list, container, false);
-        listListView = (ListView) rootView.findViewById(R.id.listview_forecast);
-        listListView.setAdapter(weatherAdapter);
+        mListView = (ListView) rootView.findViewById(R.id.listview_forecast);
+        mListView.setAdapter(weatherAdapter);
 
-        listListView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+        mListView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
 
             @Override
             public void onItemClick(AdapterView adapterView, View view, int position, long l) {
@@ -121,35 +139,63 @@ public class WeatherListFragment extends Fragment implements LoaderManager.Loade
                 Cursor cursor = (Cursor) adapterView.getItemAtPosition(position);
                 if (cursor != null) {
                     String locationSetting = Utility.getPreferredLocation(getActivity());
-                    Intent intent = new Intent(getActivity(), Detail.class)
-                            .setData(WeatherContract.WeatherEntry.buildWeatherLocationWithDate(
-                                    locationSetting, cursor.getLong(COL_WEATHER_DATE)
-                            ));
-                    startActivity(intent);
+
+                    ((Callback) getActivity()).onItemSelected(WeatherContract.WeatherEntry.buildWeatherLocationWithDate(
+                            locationSetting, cursor.getLong(COL_WEATHER_DATE)));
+
                 }
+                // Step 1: Jay - Save position when selected
+                mPosition = position;
             }
         });
+
+        // If there's instance state, mine it for useful information.
+        // The end-goal here is that the user never knows that turning their device sideways
+        // does crazy lifecycle related things.  It should feel like some stuff stretched out,
+        // or magically appeared to take advantage of room, but data or place in the app was never
+        // actually *lost*.
+
+        // Step 2-1:  Jay Read position from Bundle when re-creatView after lotation.
+        if(savedInstanceState != null && savedInstanceState.containsKey(SELECTED_KEY)){
+            // The listview probably hasn't even been populated yet.  Actually perform the
+            // swapout in onLoadFinished.
+            mPosition = savedInstanceState.getInt(SELECTED_KEY);
+            
+        }
+
+        // Jay 11/09/2016 added to make plane UI for the two pane of table UI
+        weatherAdapter.setUseTodayLayout(mUseTodayLayout);
         return rootView;
     }
 
-    /*
+    // Jay 11/09/2016 added for two panes of table UI. This is called by MainActivity
+    // when it is created and when it judges if this is two pane UI or not
+    public void setUseTodayLayout(boolean useTodayLayout){
+        mUseTodayLayout = useTodayLayout;
+        if(weatherAdapter!=null){
+            weatherAdapter.setUseTodayLayout(mUseTodayLayout);
+        }
+
+    }
+    public void onSaveInstanceState(Bundle outState){
+
+        // When tablets rotate, the currently selected list item needs to be saved.
+        // When no item is selected, mPosition will be set to Listview.INVALID_POSITION,
+        // so check for that before storing.
+        // Step 2-2: Save position before ratating
+
+        if(mPosition != ListView.INVALID_POSITION){
+            outState.putInt(SELECTED_KEY, mPosition);
+        }
+        super.onSaveInstanceState(outState);
+    }
+
     public void onStart(){
         super.onStart();
         executeTask();
 
     }
-    */
 
-    /*
-    private void showDetail (String weatherInfo){
-
-        Intent intent = new Intent(getActivity(), Detail.class);
-        //if (intent.resolveActivity(getActivity().getPackageManager()) != null) {
-        intent.putExtra("info", weatherInfo);
-            startActivity(intent);
-        //}
-    }
-    */
 
     private void toastMessage(String weatherInfo) {
         Context context = getActivity();
@@ -214,8 +260,19 @@ public class WeatherListFragment extends Fragment implements LoaderManager.Loade
         // Jay: change by ForecastAdapter
         //new FetchWeatherTask(getActivity(), weatherAdapter).execute(queryInfo);
 
+        /* Jay 11/09/2016 change code for the SunshineSerivice
         FetchWeatherTask weatherTask = new FetchWeatherTask(getActivity());
         weatherTask.execute(queryInfo);
+        */
+
+        startSunshineService(queryInfo);
+
+    }
+
+    private void startSunshineService(String[] queryInfo){
+        Intent intent = new Intent(getActivity(), SunshineService.class);
+        intent.putExtra(SunshineService.LOCATION_QUERY_EXTRA,  queryInfo );
+        getActivity().startService(intent);
     }
 
     private String findTempUnit(String tempUnit){
@@ -509,6 +566,12 @@ public class WeatherListFragment extends Fragment implements LoaderManager.Loade
     public void onLoadFinished(Loader<Cursor> loader, Cursor data) {
         Log.d(TAG, "onLoadFinished is called");
         weatherAdapter.swapCursor(data);
+        // If we don't need to restart the loader, and there's a desired position to restore
+        // to, do so now.
+        // Step 3: Jay restore the saved position when loading is finished.
+        if(mPosition != ListView.INVALID_POSITION){
+            mListView.smoothScrollToPosition(mPosition);
+        }
     }
 
     @Override

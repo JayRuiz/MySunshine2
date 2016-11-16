@@ -37,8 +37,11 @@ public class DetailFragment extends Fragment implements  LoaderManager.LoaderCal
     private ShareActionProvider myShareActionProvider;
     private static final String hasTag = "#SunshineApp";
 
-    private static final String TAG_DETAIL_F = "DetailFragment";
+    //private static final String TAG_DETAIL_F = "DetailFragment";
 
+    private final String TAG_DETAIL_F = DetailFragment.class.getSimpleName();
+    public static final String DETAIL_URI = "URI";
+    public Uri mUri;
 
     private String mForcast;
 
@@ -98,6 +101,12 @@ public class DetailFragment extends Fragment implements  LoaderManager.LoaderCal
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
 
+        //Jay add for Two pane 11/02/2016
+
+        Bundle args = getArguments();
+        if(args!= null){   // from Two pane
+            mUri = args.getParcelable(DETAIL_URI);
+        }
         setHasOptionsMenu(true);
         View rootView = inflater.inflate(R.layout.fragment_detail, container, false);
 
@@ -166,33 +175,31 @@ public class DetailFragment extends Fragment implements  LoaderManager.LoaderCal
         startActivity(settingIntent);
     }
 
+    void onLocationChanged( String newLocation ) {
+        // replace the uri, since the location has changed
+        Uri uri = mUri;
+        if (null != uri) {
+            long date = WeatherContract.WeatherEntry.getDateFromUri(uri);
+            Uri updatedUri = WeatherContract.WeatherEntry.buildWeatherLocationWithDate(newLocation, date);
+            mUri = updatedUri;
+            getLoaderManager().restartLoader(DETAIL_FORECAST_LOADER, null, this);
+        }
+    }
+
      public Loader<Cursor> onCreateLoader(int id, Bundle args) {
 
-        Intent intent = getActivity().getIntent();
-        if(intent == null){
-            return null;
-        }
+         if(null != mUri) {
 
-             return new CursorLoader(getActivity(), intent.getData(), FORECAST_COLUMNS, null, null, null);
+             return new CursorLoader(getActivity(), mUri, FORECAST_COLUMNS, null, null, null);
+         }
 
+         return null;
     }
 
     @Override
     public void onLoadFinished(Loader<Cursor> loader, Cursor data) {
         //weatherAdapter.swapCursor(data);
         if(!data.moveToFirst()){ return;}
-
-//
-//        String dateString = Utility.formatDate(data.getLong(COL_WEATHER_DATE));
-//        String weatherDescription = data.getString(COL_WEATHER_DESC);
-//        boolean isMetric = Utility.isMetric(getActivity());
-//
-//        String high = Utility.formatTemperature(getActivity(), data.getDouble(COL_WEATHER_MAX_TEMP), isMetric);
-//        String low = Utility.formatTemperature(getActivity(), data.getDouble(COL_WEATHER_MIN_TEMP), isMetric);
-//        mForcast = String.format("%s - %s - %s/%s", dateString, weatherDescription, high, low );
-//
-//        TextView detailTextView = (TextView)getView().findViewById(R.id.detail_wetherInfo_textview);
-//        detailTextView.setText(mForcast);
 
         Context detailContext = getActivity();
         boolean isMetric = Utility.isMetric(detailContext);
