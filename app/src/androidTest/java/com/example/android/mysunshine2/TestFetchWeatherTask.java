@@ -38,10 +38,11 @@ public class TestFetchWeatherTask extends AndroidTestCase{
                 WeatherContract.LocationEntry.COLUMN_LOCATION_SETTING + " = ?",
                 new String[]{ADD_LOCATION_SETTING});
 
-
+/* Jay 02/20/2017 removed by adding Sync Adapter
         FetchWeatherTask fwt = new FetchWeatherTask(getContext());
         long locationId = fwt.addLocation(ADD_LOCATION_SETTING, ADD_LOCATION_CITY,
                 ADD_LOCATION_LAT, ADD_LOCATION_LON);
+
 
 //        // does addLocation return a valid record ID?
         assertFalse("Error: addLocation returned an invalid ID on insert",
@@ -99,6 +100,9 @@ public class TestFetchWeatherTask extends AndroidTestCase{
         // clean up the test so that other tests can use the content provider
         getContext().getContentResolver().
                 acquireContentProviderClient(WeatherContract.LocationEntry.CONTENT_URI).
+
                 getLocalContentProvider().shutdown();
+    */
     }
+
 }
