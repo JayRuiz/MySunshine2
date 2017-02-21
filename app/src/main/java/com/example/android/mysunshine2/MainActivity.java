@@ -10,6 +10,8 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 
+import com.example.android.mysunshine2.sync.SunshineSyncAdapter;
+
 public class MainActivity extends AppCompatActivity implements WeatherListFragment.Callback{
 
     private final String LOG_TAG = MainActivity.class.getSimpleName();
@@ -68,6 +70,9 @@ public class MainActivity extends AppCompatActivity implements WeatherListFragme
 
         WeatherListFragment forecastFragment = (WeatherListFragment)getSupportFragmentManager().findFragmentById(R.id.WeatherFragment);
         forecastFragment.setUseTodayLayout(!mTwoPane);
+
+        // jay 02/20/2017
+        SunshineSyncAdapter.initializeSyncAdapter(this);
 
     }
 

@@ -10,9 +10,11 @@ import android.content.ContentValues;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.content.SyncRequest;
 import android.content.SyncResult;
 import android.database.Cursor;
 import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
 import android.preference.PreferenceManager;
 import android.text.format.Time;
@@ -35,13 +37,17 @@ import java.util.Vector;
 
 public class SunshineSyncAdapter extends AbstractThreadedSyncAdapter {
 
-    public final String LOG_TAG = SunshineSyncAdapter.class.getSimpleName();
+    public static final String LOG_TAG = SunshineSyncAdapter.class.getSimpleName();
 
     //private final static String QUERY_INFO = "WEATHER_QUERY_INFO";
 
     private ContentResolver mContentResolver;
     private Context mContext;
 
+    // Interval at which to sync with the weather, in seconds.
+    // 60 seconds (1 minute) * 180 = 3 hours
+    private static final int SYNC_INTERVAL = 60*180;
+    private static final int SYNC_FLEXTIME = SYNC_INTERVAL/3;
 
     public SunshineSyncAdapter(Context context, boolean autoInitialize) {
         super(context, autoInitialize);
@@ -116,7 +122,7 @@ public class SunshineSyncAdapter extends AbstractThreadedSyncAdapter {
 
     protected void fetchDataFromServer(String[] queryInfo) {
 
-        Log.d(LOG_TAG, "Sunshine Service onHandlerIntent() is called");
+        Log.d(LOG_TAG, "fetchDataFromServer() is called");
 
         HttpURLConnection urlConnection = null;
         BufferedReader reader = null;
@@ -446,8 +452,8 @@ public class SunshineSyncAdapter extends AbstractThreadedSyncAdapter {
      */
     public static Account getSyncAccount(Context context) {
         // Get an instance of the Android account manager
-        AccountManager accountManager =
-                (AccountManager) context.getSystemService(Context.ACCOUNT_SERVICE);
+        Log.d(LOG_TAG,"getSyncAccount is called" );
+        AccountManager accountManager = (AccountManager) context.getSystemService(Context.ACCOUNT_SERVICE);
 
         // Create the account type and default account
         Account newAccount = new Account(
@@ -461,6 +467,7 @@ public class SunshineSyncAdapter extends AbstractThreadedSyncAdapter {
          * If successful, return the Account object, otherwise report an error.
          */
             if (!accountManager.addAccountExplicitly(newAccount, "", null)) {
+                Log.d(LOG_TAG,"getSyncAccount: Account creation is failed. NULL" );
                 return null;
             }
             /*
@@ -470,7 +477,55 @@ public class SunshineSyncAdapter extends AbstractThreadedSyncAdapter {
              * here.
              */
 
+            //Jay 2/20/2017 In case Account is created for the first time to framework.
+            // In this case, start SyncAdapter for the first time.
+            onAccountCreated(newAccount, context);
+
         }
         return newAccount;
+    }
+
+    private static void onAccountCreated(Account newAccount, Context context) {
+        /*
+         * Since we've created an account
+         */
+
+        Log.d(LOG_TAG,"onAccountCreated is called" );
+
+        SunshineSyncAdapter.configurePeriodicSync(context, SYNC_INTERVAL, SYNC_FLEXTIME);
+
+        /*
+         * Without calling setSyncAutomatically, our periodic sync will not be enabled.
+         */
+        ContentResolver.setSyncAutomatically(newAccount, context.getString(R.string.content_authority), true);
+
+        /*
+         * Finally, let's do a sync to get things started
+         */
+        syncImmediately(context);
+    }
+
+    /**
+     * Helper method to schedule the sync adapter periodic execution
+     */
+    public static void configurePeriodicSync(Context context, int syncInterval, int flexTime) {
+        Account account = getSyncAccount(context);
+        String authority = context.getString(R.string.content_authority);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {
+            // we can enable inexact timers in our periodic sync
+            SyncRequest request = new SyncRequest.Builder().
+                    syncPeriodic(syncInterval, flexTime).
+                    setSyncAdapter(account, authority).
+                    setExtras(new Bundle()).build();
+            ContentResolver.requestSync(request);
+        } else {
+            ContentResolver.addPeriodicSync(account,
+                    authority, new Bundle(), syncInterval);
+        }
+    }
+
+    public static void initializeSyncAdapter(Context context) {
+        Log.d(LOG_TAG,"initializeSyncAdapter is called" );
+        getSyncAccount(context);
     }
 }

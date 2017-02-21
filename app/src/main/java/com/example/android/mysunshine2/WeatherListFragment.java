@@ -363,6 +363,7 @@ public class WeatherListFragment extends Fragment implements LoaderManager.Loade
     @Override
     public Loader<Cursor> onCreateLoader(int id, Bundle args) {
 
+        Log.d(TAG, "onCreateLoader is called");
         String locationSetting = Utility.getPreferredLocation(getActivity());
         String sortOrder = WeatherContract.WeatherEntry.COLUMN_DATE+ " ASC";
 
